@@ -7,7 +7,8 @@
 
 # First argument is stream to record
 # Example ./streamrecord.sh http://stream-dc1.radioparadise.com:80/mp3-128
-# Needs to be the url to the actual stream, not a m3u or pls file that lists such a thing
+# Needs to be the url to the actual stream, not a m3u or pls file that
+# lists such a thing
 STREAM_URL=$1
 
 ARCHIVE_DIR=`pwd`
