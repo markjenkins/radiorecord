@@ -94,9 +94,6 @@ def main():
             oldest_day = min(day_directories)
 
             # Delete the oldest day directory.
-            # Seeing how python (as of 2.4) doesn't provide a convienent
-            # function to do this, I'm using this non portable, recursive, no
-            # questions asked removal that the unix shell provides
             rmtree( join(full_path_to_archive_directory, oldest_day) )
 
 if __name__ == "__main__":
