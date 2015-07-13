@@ -25,8 +25,8 @@ mkdir $FILE_DAY_DIR
 quit
 EOF
 
-echo /usr/bin/sftp -b - -oIdentityFile=$KEY \
-$3@$UPLOADHOST <<EOF  > /dev/null 2>&1
+/usr/bin/sftp -b - -oIdentityFile=$KEY \
+$3@$UPLOADHOST <<EOF > /dev/null 2>&1
 cd archives
 cd $SPEED
 put $FILE_ORIG_PATH $FILE_DAY_DIR/$FILENAME
