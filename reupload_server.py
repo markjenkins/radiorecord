@@ -179,7 +179,7 @@ Also in queue:
 
 def main():
     site = server.Site(FileUploadCheckChange())
-    reactor.listenTCP(8888, site, interface='192.168.1.6')
+    reactor.listenTCP(8888, site)
     reactor.run()
 
 if __name__ == '__main__':
