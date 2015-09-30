@@ -24,7 +24,7 @@ from twisted.internet import utils, reactor, protocol
 from datetime import datetime, timedelta
 from glob import iglob
 from os.path import join as path_join, getmtime
-from os import listdir
+from os import listdir, getcwd
 
 request_list = []
 current_upload = None
@@ -43,8 +43,8 @@ MONTH = "month"
 DAY = "day"
 
 
-ARCHIVE_PATH="/home/archives/128/"
-UPLOAD_CMD="/usr/local/bin/upload_archive_file.sh"
+ARCHIVE_PATH=getcwd()
+UPLOAD_CMD="./test.sh"
 
 def filemod_in_datetime_range(file_path, startdatetime, enddatetime,
                               offset_minutes=0):
