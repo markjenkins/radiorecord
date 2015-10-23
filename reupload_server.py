@@ -23,8 +23,15 @@ from twisted.web import server, resource
 from twisted.internet import utils, reactor, protocol
 from datetime import datetime, timedelta
 from glob import iglob
-from os.path import join as path_join, getmtime
+from os.path import \
+    join as path_join, getmtime, split as path_split, splitext, exists
 from os import listdir, getcwd
+from threading import Thread, Condition
+
+from ZODB import DB
+from persistent import Persistent
+from BTrees.OOBTree import OOSet
+import transaction
 
 request_list = []
 current_upload = None
@@ -63,6 +70,13 @@ def gen_files_in_datetime_range(startdatetime, enddatetime):
                                      -2*60+1)
         )
         
+def gen_files_after_timestamp(timestamp):
+    return (
+        file_path for file_path in iglob(
+            path_join(ARCHIVE_PATH, '????-??-??', '*.mp3')
+        )
+        if get_timestamp_from_filename(file_path) > timestamp
+    )
 
 def gen_select_list(name, label, list_items):
     return """%s <select name="%s">
@@ -96,6 +110,22 @@ def extract_datetime(start_or_end, args):
 class FileUploadCheckChange(resource.Resource):
     isLeaf = True
     
+    def __init__(
+        self,
+        stuff_to_add_or_del_cond,
+        stuff_to_add, stuff_to_del,
+        *args, **kargs):
+        global request_list
+
+        resource.Resource.__init__(self, *args, **kargs)
+        
+        self.stuff_to_add_or_del_cond = stuff_to_add_or_del_cond
+        self.stuff_to_add = stuff_to_add
+        self.stuff_to_del = stuff_to_del
+
+        if len(request_list) > 0:
+            self.queue_latest_upload_set_cb()
+                        
     def render_GET(self, request, error_msg=""):
         global current_upload, current_upload_file, request_list
         return """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -137,7 +167,7 @@ Also in queue:
 
     def render_POST(self, request):
         global current_upload, current_upload_file, request_list
-
+       
         error_msg = ""
         if 'stop' in request.args:
             request_list = []
@@ -152,9 +182,14 @@ Also in queue:
                 if startdatetime > enddatetime:
                     error_msg = "Start date/time is later then end"
                 else:
-                    request_list.extend(
+                    files_to_add = tuple(
                         gen_files_in_datetime_range(startdatetime,
-                                                    enddatetime))
+                                                    enddatetime) )
+                    self.stuff_to_add_or_del_cond.acquire()
+                    self.stuff_to_add.extend(files_to_add)
+                    request_list.extend(files_to_add)
+                    self.stuff_to_add_or_del_cond.notify()
+                    self.stuff_to_add_or_del_cond.release()
 
                     if current_upload == None and len(request_list) > 0:
                         self.queue_latest_upload_set_cb()
@@ -165,22 +200,160 @@ Also in queue:
     def queue_latest_upload_set_cb(self):
         global request_list, current_upload, current_upload_file
         current_upload_file = request_list.pop()
+        # only queue files that exist, otherwise forget about them
+        # move on to the next
+        while not exists(current_upload_file):
+
+            # tell the worker thread that current_upload_file
+            # doesn't exist
+            self.tell_worker_thread_we_are_done_with_file(current_upload_file)
+            
+            if len(request_list) > 0:
+                current_upload_file = request_list.pop()
+            else:
+                current_upload_file = None
+                current_upload = None
+                return #  spaghetti exit!
+
+        # this point only reached if the return statement above is never hit, 
+        # that is current_upload_file is a file that exists
         current_upload = utils.getProcessValue(
             UPLOAD_CMD, [current_upload_file])
         current_upload.addCallback(self.upload_done)        
 
+    def tell_worker_thread_we_are_done_with_file(self, filename):
+        self.stuff_to_add_or_del_cond.acquire()
+        self.stuff_to_del.append(filename)
+        self.stuff_to_add_or_del_cond.notify()
+        self.stuff_to_add_or_del_cond.release()
+        
     def upload_done(self, exit_code):
         global request_list, current_upload, current_upload_file
-        if len(request_list) >0 :
-            self.queue_latest_upload_set_cb()
-        else:
-            current_upload = None
-            current_upload_file = None
 
+        if exit_code == 0:
+            self.tell_worker_thread_we_are_done_with_file(current_upload_file)
+            if len(request_list) >0 :
+                self.queue_latest_upload_set_cb()
+            else:
+                current_upload = None
+                current_upload_file = None
+        elif exit_code == 1:
+            request_list.append(current_upload_file)
+            self.queue_latest_upload_set_cb()
+
+
+def get_timestamp_from_filename(filename):
+    filename_part = path_split(filename)[1] # [1] gets tail
+    namepart, extension = splitext(filename_part)
+    try:
+        return int(namepart)
+    except ValueError:
+        return 0
+            
+def update_most_recent_upload(conn, newest_upload):
+    if conn.root.most_recent_upload_by_stamp != None:
+        most_recent_timestamp = get_timestamp_from_filename(
+            conn.root.most_recent_upload_by_stamp)
+    else:
+        most_recent_timestamp = 0
+
+    timestamp = get_timestamp_from_filename(newest_upload)
+    if timestamp > most_recent_timestamp:
+        conn.root.most_recent_upload_by_stamp = newest_upload
+            
+
+def persist_thread_run(
+        stuff_to_add_or_del_cond, 
+        stuff_to_add, stuff_to_del, check_keep_going,
+        db
+        ):
+    conn = db.open()
+
+    # acquire for our fist time through
+    stuff_to_add_or_del_cond.acquire()
+
+    while True:
+        if len(stuff_to_add) > 0 or len(stuff_to_del) > 0:
+            conn.root.uploads_to_happen.update(stuff_to_add)
+            for del_this in stuff_to_del:
+                conn.root.uploads_to_happen.remove(del_this)
+                update_most_recent_upload(conn, del_this)
+            # delete all the entries, python 3.3 has added a clear() method
+            # which would have been prettier
+            del stuff_to_add[:]
+            del stuff_to_del[:]
+            stuff_to_add_or_del_cond.release()
+
+            
+            # and this ladies and gentlemen is the point of having a worker
+            # thread for the database work, as this is
+            transaction.commit()
+
+            # re-acquire the condition as we're going to go back to the
+            # top and check if anything changed while we were working
+            stuff_to_add_or_del_cond.acquire()
+
+        elif not check_keep_going():
+            stuff_to_add_or_del_cond.release()
+            break
+        else:
+            stuff_to_add_or_del_cond.wait()
+
+    conn.close()
+            
 def main():
-    site = server.Site(FileUploadCheckChange())
+    global request_list
+
+    db = DB('uploads.fs')
+    conn = db.open()
+    if not hasattr(conn.root, 'uploads_to_happen'):
+        conn.root.uploads_to_happen = OOSet()
+
+    if not hasattr(conn.root, 'most_recent_upload_by_stamp'):
+        conn.root.most_recent_upload_by_stamp = None
+
+    transaction.commit()
+
+    # look for any files with a timestamp later than our latest
+    if conn.root.most_recent_upload_by_stamp != None:
+        conn.root.uploads_to_happen.update(
+            gen_files_after_timestamp(get_timestamp_from_filename(
+                conn.root.most_recent_upload_by_stamp)) )
+        transaction.commit()
+    
+    request_list.extend(conn.root.uploads_to_happen)
+
+    server_should_run = True
+    def check_keep_going():
+        return server_should_run
+
+
+    stuff_to_add_or_del_cond = Condition()
+    stuff_to_add = []
+    stuff_to_del = []
+
+    def persist_thread_routine():
+        persist_thread_run( stuff_to_add_or_del_cond, 
+                            stuff_to_add, stuff_to_del, check_keep_going, db)
+    
+    persist_thread = Thread(target=persist_thread_routine)
+    persist_thread.start()
+    
+    site = server.Site(FileUploadCheckChange(
+            stuff_to_add_or_del_cond,
+            stuff_to_add, stuff_to_del,
+            ))
+
     reactor.listenTCP(8888, site)
     reactor.run()
 
+    # we should be sure that there is no possibility that our database thread 
+    stuff_to_add_or_del_cond.acquire()
+    server_should_run = False
+    stuff_to_add_or_del_cond.notify()
+    stuff_to_add_or_del_cond.release()
+    persist_thread.join()
+
+    
 if __name__ == '__main__':
     main()
