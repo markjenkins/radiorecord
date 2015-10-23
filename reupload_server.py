@@ -165,6 +165,18 @@ Also in queue:
        gen_time_html(ENDTIME), gen_date_html(ENDDATE),
        str(current_upload_file), '\n'.join(request_list) )
 
+    def queue_upload_of_files(self, files_to_add):
+        global current_upload, current_upload_file, request_list
+
+        self.stuff_to_add_or_del_cond.acquire()
+        self.stuff_to_add.extend(files_to_add)
+        request_list.extend(files_to_add)
+        self.stuff_to_add_or_del_cond.notify()
+        self.stuff_to_add_or_del_cond.release()
+        
+        if current_upload == None and len(request_list) > 0:
+            self.queue_latest_upload_set_cb()
+        
     def render_POST(self, request):
         global current_upload, current_upload_file, request_list
        
@@ -172,6 +184,9 @@ Also in queue:
         if 'stop' in request.args:
             request_list = []
             error_msg = "stoping as requested"
+        elif request.path == "/specific_file":
+            if "upload" in request.args:
+                self.queue_upload_of_files(request.args["upload"])
         else:
             try:
                 startdatetime = extract_datetime(START, request.args)
@@ -182,17 +197,11 @@ Also in queue:
                 if startdatetime > enddatetime:
                     error_msg = "Start date/time is later then end"
                 else:
-                    files_to_add = tuple(
-                        gen_files_in_datetime_range(startdatetime,
-                                                    enddatetime) )
-                    self.stuff_to_add_or_del_cond.acquire()
-                    self.stuff_to_add.extend(files_to_add)
-                    request_list.extend(files_to_add)
-                    self.stuff_to_add_or_del_cond.notify()
-                    self.stuff_to_add_or_del_cond.release()
-
-                    if current_upload == None and len(request_list) > 0:
-                        self.queue_latest_upload_set_cb()
+                    self.queue_upload_of_files(
+                        tuple(
+                            gen_files_in_datetime_range(startdatetime,
+                                                        enddatetime) )
+                    )
 
         return self.render_GET(request, error_msg)
 
