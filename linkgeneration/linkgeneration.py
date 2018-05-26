@@ -2,6 +2,7 @@
 
 from datetime import date, timedelta
 
+DEFAULT_WEEKS_BACK = 5
 HOURS_PER_DAY=24
 
 def weeks_or_days_date_back(
@@ -20,8 +21,6 @@ def hours_between_start_and_end_inclusive(start_hour, last_hour):
         raise ValueError("invalid start or end hour")
     
     return (last_hour - start_hour) % 24 + 1
-
-DEFAULT_WEEKS_BACK = 5
 
 if __name__ == "__main__":
     print( weeks_or_days_date_back(5, date.today() ) )
