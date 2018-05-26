@@ -1,7 +1,7 @@
 from .dategeneration import generate_dates_for_showtime
 
+# example http://ckuw.ca/128/20180523.08.00-09.00.mp3
 URLBASE = "http://ckuw.ca/128/"
-#20180523.08.00-09.00.mp3
 FILESUFFIX = ".mp3"
 
 def generate_links_for_showtime(
