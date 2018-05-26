@@ -61,6 +61,11 @@ weekday_values = set(weekday_map.keys())
 min_weekday = min(weekday_map.values())
 max_weekday = max(weekday_map.values())
 
+FIVE_DAY_WEEKDAYS = {
+    weekday_map[day_key]
+    for day_key in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday')
+    }
+
 def valid_weekday(weekday):
     return min_weekday<=weekday<=max_weekday
 
@@ -131,6 +136,16 @@ def relevant_days_for_daily_from_datetime(
         weeksback*NUMBER_OF_DAYS_IN_WEEK,
         most_recent_show_datetime, timedelta(1) )
 
+def relevant_days_for_5_weekday_from_datetime(
+        starttimeofday, target_datetime, weeksback):
+    return [
+        relevant_day
+        for relevant_day in
+        relevant_days_for_daily_from_datetime( 
+            starttimeofday, target_datetime, weeksback)
+        if relevant_day.weekday() in FIVE_DAY_WEEKDAYS
+        ]
+    
 def generate_dates_for_showtime(
         dayofweek, starttimeofday,
         lasthour=None, weeksback=None):
@@ -160,7 +175,8 @@ def generate_dates_for_showtime(
             starttimeofday, now_with_buffer, weeksback)
 
     elif dayofweek == 'weekdays':
-        assert(False) # not implemented yet
+        relevant_days = relevant_days_for_5_weekday_from_datetime(
+            starttimeofday, now_with_buffer, weeksback)
     else:
         raise ValueError(
             "dayofweek needs to be daily, weekdays, or a specific day")
