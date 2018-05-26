@@ -14,3 +14,5 @@ DEFAULT_WEEKS_BACK = 5
 
 if __name__ == "__main__":
     print( weeks_or_days_date_back(5, date.today() ) )
+    print( weeks_or_days_date_back(20, date.today(), 
+                                   increment=timedelta(days=1) ) )
