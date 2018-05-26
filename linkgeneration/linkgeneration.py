@@ -3,12 +3,15 @@
 from datetime import date, datetime, timedelta
 
 DEFAULT_WEEKS_BACK = 5
+MAX_WEEKS_BACK = 256
 HOURS_PER_DAY=24
 NUMBER_OF_DAYS_IN_WEEK = 7
 
+BUFFERTIMEDELTA = timedelta(hours=2)
+
 def weeks_or_days_date_back(
         num_days_weeks, most_recent_date,
-        increment=timedelta(days=7) ):
+        increment=timedelta(days=NUMBER_OF_DAYS_IN_WEEK) ):
     return [
         most_recent_date - increment*i
         for i in range(num_days_weeks)
@@ -45,18 +48,18 @@ def dates_with_included_start_and_last_hours(
         ]
 
 weekday_map = {
-    0: 'monday',
-    1: 'tuesday',
-    2: 'wednesday',
-    2: 'thursday',
-    2: 'friday',
-    5: 'saturday',
-    6: 'sunday',
+    'monday': 0,
+    'tuesday': 1,
+    'wednesday': 2,
+    'thursday': 3,
+    'friday': 4,
+    'saturday': 5,
+    'sunday': 6,
     }
 
-weekday_keys = list(weekday_map.keys())
-min_weekday = min(weekday_keys)
-max_weekday = max(weekday_keys)
+weekday_values = set(weekday_map.keys())
+min_weekday = min(weekday_map.values())
+max_weekday = max(weekday_map.values())
 
 def valid_weekday(weekday):
     return min_weekday<=weekday<=max_weekday
@@ -94,9 +97,67 @@ def most_recent_date_w_day_of_week_prior_to(
     if found_datetime <= datetime_to_compare:
         return found_datetime
     else:
-        return_datetime =  found_datetime - timedelta(7)
+        return_datetime =  found_datetime - timedelta(NUMBER_OF_DAYS_IN_WEEK)
         assert( return_datetime < datetime_to_compare)
         return return_datetime
+
+def generate_dates_for_showtime(
+        dayofweek, starttimeofday,
+        lasthour=None, weeksback=None):
+
+    if weeksback==None:
+        weeksback = DEFAULT_WEEKS_BACK
+    elif weeksback<1:
+        raise ValueError("invalid weeks back")
+    else:
+        # ignore weeks back above the max, just fix it
+        weeksback = min(MAX_WEEKS_BACK, weeksback)
+
+    if lasthour == None:
+        lasthour = starttimeofday
+
+    if not (valid_hour(starttimeofday) and valid_hour(lasthour)):
+        raise ValueError("not a valid start or last hour")
+
+    now_with_buffer = datetime.now() - BUFFERTIMEDELTA
+
+    if dayofweek in weekday_values:
+        most_recent_show_datetime = \
+            most_recent_date_w_day_of_week_prior_to(
+                weekday_map[dayofweek],
+                starttimeofday,
+                now_with_buffer
+            )
+        # for shows once a week we go back one week at a time
+        # weeksback already validated
+        relevant_days = weeks_or_days_date_back(
+            weeksback, most_recent_show_datetime,
+            timedelta(NUMBER_OF_DAYS_IN_WEEK) )
+
+    elif dayofweek == 'daily':
+        now_minus_buffer_yesterday = now_with_buffer - timedelta(days=1)
+        most_recent_show_datetime = datetime(
+            year=now_minus_buffer_yesterday.year,
+            month=now_minus_buffer_yesterday.month,
+            day=now_minus_buffer_yesterday.day,
+            hour=starttimeofday
+            )
+        # for shows everyday, we go back one day at a time
+        # weeksback is already validated, but we want to fetch all the days
+        # from those weeks so we multiply by NUMBER_OF_DAYS_IN_WEEK (7)
+        relevant_days = weeks_or_days_date_back(
+            weeksback*NUMBER_OF_DAYS_IN_WEEK,
+            most_recent_show_datetime, timedelta(1) )
+
+    elif dayofweek == 'weekdays':
+        assert(False) # not implemented yet
+    else:
+        raise ValueError(
+            "dayofweek needs to be daily, weekdays, or a specific day")
+
+    return dates_with_included_start_and_last_hours(
+        relevant_days, starttimeofday, lasthour
+        )
 
 if __name__ == "__main__":
     print( weeks_or_days_date_back(5, date.today() ) )
@@ -122,3 +183,6 @@ if __name__ == "__main__":
         most_recent_date_w_day_of_week_prior_to(
             6, 10, datetime(2018,5,26, 9)
         ) )
+
+    print(
+        generate_dates_for_showtime('sunday', 23, 1) )
