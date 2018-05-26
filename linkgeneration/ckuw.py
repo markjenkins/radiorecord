@@ -21,6 +21,7 @@ def generate_links_for_showtime(
                } # end dict fed to string formating
           for ephour in episode] # end inner list comprehension 
         for episode in generate_dates_for_showtime(
-                dayofweek, starttimeofday, lasthour=None, weeksback=None)
+                dayofweek, starttimeofday,
+                lasthour=lasthour, weeksback=weeksback)
         ] # end outer list comprehension
 
