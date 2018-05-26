@@ -115,6 +115,22 @@ def relevant_days_for_weekly_from_datetime(
         weeksback, most_recent_show_datetime,
         timedelta(NUMBER_OF_DAYS_IN_WEEK) )
 
+def relevant_days_for_daily_from_datetime(
+        starttimeofday, target_datetime, weeksback):
+    now_minus_buffer_yesterday = target_datetime - timedelta(days=1)
+    most_recent_show_datetime = datetime(
+        year=now_minus_buffer_yesterday.year,
+        month=now_minus_buffer_yesterday.month,
+        day=now_minus_buffer_yesterday.day,
+        hour=starttimeofday
+    )
+    # for shows everyday, we go back one day at a time
+    # weeksback is already validated, but we want to fetch all the days
+    # from those weeks so we multiply by NUMBER_OF_DAYS_IN_WEEK (7)
+    return weeks_or_days_date_back(
+        weeksback*NUMBER_OF_DAYS_IN_WEEK,
+        most_recent_show_datetime, timedelta(1) )
+
 def generate_dates_for_showtime(
         dayofweek, starttimeofday,
         lasthour=None, weeksback=None):
@@ -140,19 +156,8 @@ def generate_dates_for_showtime(
             dayofweek, starttimeofday, now_with_buffer, weeksback)
 
     elif dayofweek == 'daily':
-        now_minus_buffer_yesterday = now_with_buffer - timedelta(days=1)
-        most_recent_show_datetime = datetime(
-            year=now_minus_buffer_yesterday.year,
-            month=now_minus_buffer_yesterday.month,
-            day=now_minus_buffer_yesterday.day,
-            hour=starttimeofday
-            )
-        # for shows everyday, we go back one day at a time
-        # weeksback is already validated, but we want to fetch all the days
-        # from those weeks so we multiply by NUMBER_OF_DAYS_IN_WEEK (7)
-        relevant_days = weeks_or_days_date_back(
-            weeksback*NUMBER_OF_DAYS_IN_WEEK,
-            most_recent_show_datetime, timedelta(1) )
+        relevant_days = relevant_days_for_daily_from_datetime(
+            starttimeofday, now_with_buffer, weeksback)
 
     elif dayofweek == 'weekdays':
         assert(False) # not implemented yet
