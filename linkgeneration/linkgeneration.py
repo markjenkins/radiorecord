@@ -164,7 +164,17 @@ def generate_dates_for_showtime(
     if not (valid_hour(starttimeofday) and valid_hour(lasthour)):
         raise ValueError("not a valid start or last hour")
 
-    now_with_buffer = datetime.now() - BUFFERTIMEDELTA
+    # subtract from the current time the show length and buffer time
+    # to allow for upload so we can be sure the show start time is at an
+    # appropriate time
+    now_with_buffer = (
+        datetime.now() -
+        timedelta(hours=
+                  hours_between_start_and_end_inclusive(starttimeofday,
+                                                        lasthour)
+        ) -
+        BUFFERTIMEDELTA
+    )  # end expression
 
     if dayofweek in weekday_values:
         relevant_days = relevant_days_for_weekly_from_datetime(
