@@ -2,6 +2,8 @@
 
 from datetime import date, timedelta
 
+HOURS_PER_DAY=24
+
 def weeks_or_days_date_back(
         num_days_weeks, most_recent_date,
         increment=timedelta(days=7) ):
@@ -9,8 +11,6 @@ def weeks_or_days_date_back(
         most_recent_date - increment*i
         for i in range(num_days_weeks)
         ]
-
-HOURS_PER_DAY=24
 
 def valid_hour(hour):
     return 0<=hour<=(HOURS_PER_DAY-1) # (0-23 inclusive)
