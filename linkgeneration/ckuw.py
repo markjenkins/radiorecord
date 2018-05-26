@@ -13,7 +13,6 @@ def generate_links_for_showtime(
            "%(year).4d" + "%(month).2d" + "%(day).2d" + "." +
            "%(starthour).2d.00-" +
            "%(endhour).2d.00" + FILESUFFIX ) % {
-               'urlbase': URLBASE,
                'year': ephour.year,
                'month': ephour.month,
                'day': ephour.day,
