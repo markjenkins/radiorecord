@@ -101,6 +101,20 @@ def most_recent_date_w_day_of_week_prior_to(
         assert( return_datetime < datetime_to_compare)
         return return_datetime
 
+def relevant_days_for_weekly_from_datetime(
+        dayofweek, starttimeofday, target_datetime, weeksback):
+    most_recent_show_datetime = \
+        most_recent_date_w_day_of_week_prior_to(
+            weekday_map[dayofweek],
+            starttimeofday,
+            target_datetime
+        )
+    # for shows once a week we go back one week at a time
+    # weeksback already validated
+    return weeks_or_days_date_back(
+        weeksback, most_recent_show_datetime,
+        timedelta(NUMBER_OF_DAYS_IN_WEEK) )
+
 def generate_dates_for_showtime(
         dayofweek, starttimeofday,
         lasthour=None, weeksback=None):
@@ -122,17 +136,8 @@ def generate_dates_for_showtime(
     now_with_buffer = datetime.now() - BUFFERTIMEDELTA
 
     if dayofweek in weekday_values:
-        most_recent_show_datetime = \
-            most_recent_date_w_day_of_week_prior_to(
-                weekday_map[dayofweek],
-                starttimeofday,
-                now_with_buffer
-            )
-        # for shows once a week we go back one week at a time
-        # weeksback already validated
-        relevant_days = weeks_or_days_date_back(
-            weeksback, most_recent_show_datetime,
-            timedelta(NUMBER_OF_DAYS_IN_WEEK) )
+        relevant_days = relevant_days_for_weekly_from_datetime(
+            dayofweek, starttimeofday, now_with_buffer, weeksback)
 
     elif dayofweek == 'daily':
         now_minus_buffer_yesterday = now_with_buffer - timedelta(days=1)
