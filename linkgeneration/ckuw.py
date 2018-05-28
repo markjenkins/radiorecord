@@ -17,7 +17,7 @@ def generate_links_for_showtime(
                'month': ephour.month,
                'day': ephour.day,
                'starthour': ephour.hour,
-               'endhour': (lasthour+1) % 24
+               'endhour': (ephour+1) % 24
                } # end dict fed to string formating
           for ephour in episode] # end inner list comprehension 
         for episode in generate_dates_for_showtime(
