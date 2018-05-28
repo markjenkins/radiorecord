@@ -1,0 +1,12 @@
+Hello world
+#set($inputRoot = $input.path('$'))
+#foreach($episode in $inputRoot)
+<p>
+Episode: 
+<ul>
+     #foreach($hourseg in $episode)
+         <li><a href="$hourseg">$hourseg</a></li>
+     #end
+     </ul>
+     </p>
+#end

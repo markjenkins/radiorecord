@@ -1,0 +1,10 @@
+{
+  "params": {
+    "querystring": {
+      "dayofweek": "tuesday",
+      "starttimeofday": 5,
+      "lasthour": 6,
+      "weeksback": 3
+    }
+  }
+}

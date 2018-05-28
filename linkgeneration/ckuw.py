@@ -1,4 +1,4 @@
-from .dategeneration import generate_dates_for_showtime
+from linkgeneration.dategeneration import generate_dates_for_showtime
 
 # example http://ckuw.ca/128/20180523.08.00-09.00.mp3
 URLBASE = "http://ckuw.ca/128/"
@@ -25,3 +25,10 @@ def generate_links_for_showtime(
                 lasthour=lasthour, weeksback=weeksback)
         ] # end outer list comprehension
 
+def generate_links_handler(event, context):
+    lasthour = None if 'lasthour' not in event['params']['querystring'] else event['params']['querystring']['lasthour']
+    weeksback = None if 'weeksback' not in event['params']['querystring'] else event['params']['querystring']['weeksback']
+    return generate_links_for_showtime( event['params']['querystring']['dayofweek'], 
+                                        int(event['params']['querystring']['starttimeofday']),
+                                        lasthour=lasthour,
+                                        weeksback=weeksback)
