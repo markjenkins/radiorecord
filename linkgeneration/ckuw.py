@@ -4,23 +4,25 @@ from linkgeneration.dategeneration import generate_dates_for_showtime
 URLBASE = "http://ckuw.ca/128/"
 FILESUFFIX = ".mp3"
 
+def generate_link_for_showtime(ephour):
+    return (URLBASE +
+            "%(year).4d" + "%(month).2d" + "%(day).2d" + "." +
+            "%(starthour).2d.00-" +
+            "%(endhour).2d.00" + FILESUFFIX ) % {
+                'year': ephour.year,
+                'month': ephour.month,
+                'day': ephour.day,
+                'starthour': ephour.hour,
+                'endhour': (ephour.hour+1) % 24
+            } # end dict fed to string formating
+
 def generate_links_for_showtime(
     dayofweek, starttimeofday, lasthour=None, weeksback=None):
     if lasthour==None:
         lasthour=starttimeofday
-    return [
-        [ (URLBASE +
-           "%(year).4d" + "%(month).2d" + "%(day).2d" + "." +
-           "%(starthour).2d.00-" +
-           "%(endhour).2d.00" + FILESUFFIX ) % {
-               'year': ephour.year,
-               'month': ephour.month,
-               'day': ephour.day,
-               'starthour': ephour.hour,
-               'endhour': (ephour.hour+1) % 24
-               } # end dict fed to string formating
-          for ephour in episode] # end inner list comprehension 
-        for episode in generate_dates_for_showtime(
+    # there's an inner and an outer list comprehension here
+    return [ [ generate_link_for_showtime(ephour) for ephour in episode]
+             for episode in generate_dates_for_showtime(
                 dayofweek, starttimeofday,
                 lasthour=lasthour, weeksback=weeksback)
         ] # end outer list comprehension
