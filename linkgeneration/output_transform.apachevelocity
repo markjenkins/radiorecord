@@ -1,11 +1,19 @@
-Hello world
+<h1>CKUW Demo</h1>
+<h2>$input.params().querystring.get('showtitle')</h2>
+<h3>$input.params().querystring.get('dayofweek') at
+$input.params().querystring.get('starttimeofday')</h3>
+
+<p>
+    $input.params().querystring.get('shownote')
+</p>
+
 #set($inputRoot = $input.path('$'))
 #foreach($episode in $inputRoot)
 <p>
 Episode: 
 <ul>
      #foreach($hourseg in $episode)
-         <li><a href="$hourseg">$hourseg</a></li>
+         <li><a href="$hourseg.link">$hourseg.hour-date $hourseg.hour</a></li>
      #end
      </ul>
      </p>
