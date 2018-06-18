@@ -1,0 +1,4 @@
+#EXTM3U
+#EXTINF:3654,CJNU Archives
+#set($allParams = $input.params())
+$allParams.querystring.url

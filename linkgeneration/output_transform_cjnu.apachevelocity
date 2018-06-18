@@ -1,0 +1,37 @@
+#set($inputRoot = $input.path('$'))
+
+<h1>CJNU Archives</h1>
+
+<img
+src="http://archive-page-files.cjnu.ca.s3-website.us-east-2.amazonaws.com/cjnu-logo.png" />
+
+<h2>$input.params().querystring.get('showtitle')</h2>
+<h3>$input.params().querystring.get('dayofweek') at
+$inputRoot[0].first-hour
+</h3>
+
+<p>
+    $input.params().querystring.get('shownote')
+</p>
+
+#foreach($episode in $inputRoot)
+<p>
+$episode.date-pretty
+<ul>
+    #foreach($hourseg in $episode.segments)
+    <li>
+    #set($targeturlesc = $util.urlEncode($hourseg.link) )
+    <a
+    href="/cjnu-archive-listen-m3u?url=$targeturlesc">
+        Hour $hourseg.hour-count</a>
+    <!-- Hour $hourseg.hour-count
+    <a
+    href="/cjnu-archive-listen-pls?url=$targeturlesc">
+        stream PLS</a>
+        -->
+    </li>
+    #end
+</ul>
+</p>
+#end
+
