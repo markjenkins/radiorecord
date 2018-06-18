@@ -6,8 +6,12 @@
 src="http://archive-page-files.cjnu.ca.s3-website.us-east-2.amazonaws.com/cjnu-logo.png" />
 
 <h2>$input.params().querystring.get('showtitle')</h2>
-<h3>$input.params().querystring.get('dayofweek') at
-$inputRoot[0].first-hour
+<h3>
+#set($showday = $input.params().querystring.get('dayofweek'))
+$showday.substring(0,1).toUpperCase()$showday.substring(1).toLowerCase()#if($showday != 'daily' and $showday != 'weekdays')
+s
+#end
+ at $inputRoot[0].first-hour
 </h3>
 
 <p>
